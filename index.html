@@ -1,11 +1,11 @@
-Ниже представлен код теста, который реализует вашу идею: **правильные ответы скрыты** (зеленое/красное свечение появляется **только после выбора**), а при ошибке на 10 секунд всплывает модальное окно с картинкой «Неудача». После выбора вопрос блокируется, изменить ответ нельзя.
+Вот готовый тест, где **правильные ответы никак не выделяются** (все варианты имеют единый цвет), а при ошибке всплывает окно «НЕУДАЧА» ровно на **3 секунды**.
 ```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>История Казахстана — тест с суровой неудачей</title>
+    <title>История Казахстана — тест вслепую (без подсказок)</title>
     <style>
         * {
             margin: 0;
@@ -159,17 +159,9 @@
             cursor: default;
         }
 
-        /* Подсветка после выбора */
-        .correct-highlight {
-            background: #b7e4c7 !important;
-            border-left: 8px solid #2c6e2f !important;
-            border-radius: 60px;
-        }
-        .wrong-highlight {
-            background: #f8d7da !important;
-            border-left: 8px solid #b91c1c !important;
-            border-radius: 60px;
-        }
+        /* ВСЕ ОТВЕТЫ ОДИНАКОВЫЕ — никакого выделения правильных!
+           Убираем классы correct-highlight и wrong-highlight полностью */
+        /* Никакой подсветки правильных/неправильных ответов больше нет */
 
         .btn-gold {
             background: linear-gradient(95deg, #dbb42c, #c9a03d);
@@ -209,7 +201,7 @@
             color: #9e2a2b;
         }
 
-        /* Модальное окно неудачи */
+        /* Модальное окно неудачи (3 секунды) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -222,7 +214,6 @@
             justify-content: center;
             z-index: 1000;
             backdrop-filter: blur(4px);
-            transition: opacity 0.2s;
         }
         .modal-card {
             background: #2d1e12;
@@ -237,10 +228,11 @@
         }
         .modal-card img {
             width: 100%;
-            max-width: 180px;
+            max-width: 150px;
             border-radius: 2rem;
             margin-bottom: 1rem;
             border: 3px solid #e0b354;
+            background: #fff0d4;
         }
         .modal-card h3 {
             color: #ffcc88;
@@ -250,7 +242,7 @@
         }
         .modal-card p {
             color: #f3d9b1;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
         @keyframes shake {
             0%,100% { transform: translateX(0); }
@@ -274,9 +266,9 @@
 <body>
 <div class="glass-container">
     <div class="hero">
-        <h1>🏺 СУРОВЫЙ ТЕСТ 🏺</h1>
-        <div class="sub">История Казахстана — ошибка не прощается</div>
-        <div class="warning">⚠️ Правильные ответы НЕ видны до выбора. Ошибешься — увидишь «НЕУДАЧУ» на 10 секунд ⚠️</div>
+        <h1>🏺 СЛЕПОЙ ТЕСТ 🏺</h1>
+        <div class="sub">История Казахстана — ответы не подсвечиваются</div>
+        <div class="warning">⚠️ Правильные ответы НЕ ВИДНЫ. Ошибка = «НЕУДАЧА» на 3 секунды ⚠️</div>
     </div>
 
     <div id="quizRoot" class="quiz-grid"></div>
@@ -285,11 +277,13 @@
     <div class="result-panel" id="resultPanel">
         <div>🏆 Нажмите кнопку, чтобы узнать итоговый балл 🏆</div>
     </div>
-    <footer>✅ После выбора ответа: правильный подсветится зелёным, ошибочный — красным. Вопрос блокируется.</footer>
+    <footer>✅ После выбора ответа вопрос блокируется. Никаких зелёных/красных подсказок — только честный результат.</footer>
 </div>
 
 <script>
-    // ------------------------------- ВСЕ ВОПРОСЫ (50 штук, полная история) ---------------------------------
+    // ---------------------------------------------------------------
+    // 50 ВОПРОСОВ (полная история Казахстана)
+    // ---------------------------------------------------------------
     const originalQuestions = [
         { text: "1. как называлось земледелие андроновцев?", options: ["A) сезонное земледелие", "B) переходное земледелие", "C) орошаемое земледелие", "D) оседлое земледелие", "E) сквозное земледелие"], correct: 3 },
         { text: "2. имя человека, правившего древним племенем:", options: ["A) Командир", "Б) Вождь", "C) Капитан", "D) Комбат", "Е) Старик"], correct: 1 },
@@ -350,23 +344,19 @@
     let questionLocked = new Array(allQuestions.length).fill(false);
     let activeModal = null;
 
-    // -----  функция показа модалки с фоткой (неудача) -----
+    // ---- Функция показа модалки "НЕУДАЧА" на 3 секунды ----
     function showFailModal() {
         if (activeModal) return;
         const modalDiv = document.createElement('div');
         modalDiv.className = 'modal-overlay';
-        // ВСТАВЬТЕ СЮДА ВАШУ ФОТОГРАФИЮ (можно ссылку или data:image, здесь пример с эмодзи-картинкой, но замените на реальный URL)
-        // Для демонстрации используем base64 пнг-заглушку с текстом "НЕУДАЧА", но вы можете подставить свою картинку.
-        // Чтобы реально вставить фото - поменяйте src на путь к файлу. Например: "fail.jpg" или "https://example.com/fail.png"
-        // Сейчас используется эмодзи-стиль, но вы можете заменить на любую картинку:
-        const failImgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%238B0000'/%3E%3Ctext x='50' y='67' font-size='32' text-anchor='middle' fill='white' font-weight='bold'%3E💀%3C/text%3E%3C/svg%3E";
-        // ↑ это стилизованный череп, но если нужна настоящая картинка - замените src на свой URL.
+        // Картинка — стилизованный череп (можно заменить на любую вашу фотку, указав реальный URL)
+        const failImgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%238B0000'/%3E%3Ctext x='50' y='67' font-size='38' text-anchor='middle' fill='white' font-weight='bold'%3E💀%3C/text%3E%3C/svg%3E";
         modalDiv.innerHTML = `
             <div class="modal-card">
-                <img src="${failImgSrc}" alt="Неудача" style="background: #fff3e0; padding: 10px; border-radius: 2rem;">
+                <img src="${failImgSrc}" alt="Неудача">
                 <h3>НЕУДАЧА!</h3>
                 <p>Ответ неверный...<br>Попытки больше нет.</p>
-                <small style="color:#d4af37;">⏱ окно закроется через 10 секунд</small>
+                <small style="color:#d4af37;">⏱ окно закроется через 3 секунды</small>
             </div>
         `;
         document.body.appendChild(modalDiv);
@@ -376,84 +366,58 @@
                 activeModal.remove();
                 activeModal = null;
             }
-        }, 10000);
+        }, 3000);  // ровно 3 секунды
     }
 
-    // сохраняем ответы в localStorage
+    // --- Работа с localStorage ---
     function saveAnswerLocally(qid, selectedIdx) {
         const answers = getSavedMap();
         answers[qid] = selectedIdx;
-        localStorage.setItem('kazakh_no_preview_answers', JSON.stringify(answers));
+        localStorage.setItem('blind_test_kazakh', JSON.stringify(answers));
     }
 
     function getSavedMap() {
-        const raw = localStorage.getItem('kazakh_no_preview_answers');
+        const raw = localStorage.getItem('blind_test_kazakh');
         if (!raw) return {};
         try { return JSON.parse(raw); } catch(e) { return {}; }
     }
 
     function getStoredAnswer(qid) {
         const map = getSavedMap();
-        if (map.hasOwnProperty(qid)) return map[qid];
-        return null;
+        return map.hasOwnProperty(qid) ? map[qid] : null;
     }
 
     function loadLockState() {
         const map = getSavedMap();
         for (let i = 0; i < allQuestions.length; i++) {
-            if (map.hasOwnProperty(i)) questionLocked[i] = true;
-            else questionLocked[i] = false;
+            questionLocked[i] = map.hasOwnProperty(i);
         }
     }
 
-    // Подсветка конкретного вопроса (зелёным правильный вариант + если ошибка – красный выбранный)
-    function highlightSingleQuestion(qid) {
-        const card = document.querySelector(`.question-card[data-qid='${qid}']`);
-        if (!card) return;
-        const qData = allQuestions[qid];
-        const correctIdx = qData.correct;
-        const rows = card.querySelectorAll('.option-row');
-        rows.forEach(r => r.classList.remove('correct-highlight', 'wrong-highlight'));
-        // подсвечиваем правильный ответ (зеленый) всегда, потому что после выбора показываем истину
-        if (rows[correctIdx]) rows[correctIdx].classList.add('correct-highlight');
-        const chosen = getStoredAnswer(qid);
-        if (chosen !== null && chosen !== correctIdx && rows[chosen]) {
-            rows[chosen].classList.add('wrong-highlight');
-        }
-    }
-
-    function highlightAll() {
-        for (let i = 0; i < allQuestions.length; i++) {
-            highlightSingleQuestion(i);
-        }
-    }
-
-    // фиксация выбора: сохраняем, блокируем, показываем модалку при ошибке
+    // Фиксация выбора: сохраняем, блокируем, при ошибке показываем неудачу
     function lockAnswer(qid, selectedVal) {
         if (questionLocked[qid]) return;
         const isCorrect = (selectedVal === allQuestions[qid].correct);
         saveAnswerLocally(qid, selectedVal);
         questionLocked[qid] = true;
-        // Перерисовываем вопрос, чтобы обновить UI и заблокировать клики
         renderSingleQuestion(qid);
-        highlightSingleQuestion(qid);
         if (!isCorrect) {
-            showFailModal();   // при неправильном ответе — всплывает картинка "неудача" на 10 сек
+            showFailModal();   // всплывает "НЕУДАЧА" на 3 секунды
         }
     }
 
-    // Рендер одного вопроса (чтобы не перерисовывать всё)
+    // Рендер одного вопроса (без какой-либо подсветки правильных ответов)
     function renderSingleQuestion(qid) {
         const cardDiv = document.querySelector(`.question-card[data-qid='${qid}']`);
         if (!cardDiv) return;
         const q = allQuestions[qid];
         const isLocked = questionLocked[qid];
         const storedVal = getStoredAnswer(qid);
-        // обновляем options
         const optionsContainer = cardDiv.querySelector('.options-list');
         if (!optionsContainer) return;
         const groupName = `q_${qid}`;
         optionsContainer.innerHTML = '';
+
         q.options.forEach((opt, optIdx) => {
             const row = document.createElement('div');
             row.className = 'option-row';
@@ -470,6 +434,7 @@
             label.innerText = opt;
             row.appendChild(radio);
             row.appendChild(label);
+
             if (!isLocked) {
                 row.addEventListener('click', (e) => {
                     if (e.target.tagName !== 'INPUT') {
@@ -479,8 +444,7 @@
                     if (!questionLocked[qid]) {
                         const selectedRadio = row.querySelector('input');
                         if (selectedRadio && selectedRadio.checked) {
-                            const val = parseInt(selectedRadio.value);
-                            lockAnswer(qid, val);
+                            lockAnswer(qid, parseInt(selectedRadio.value));
                         }
                     }
                 });
@@ -494,11 +458,12 @@
             }
             optionsContainer.appendChild(row);
         });
+
         if (isLocked) cardDiv.classList.add('locked');
         else cardDiv.classList.remove('locked');
     }
 
-    // Полный рендер
+    // Полная отрисовка всех вопросов
     function renderFull() {
         const root = document.getElementById('quizRoot');
         root.innerHTML = '';
@@ -512,7 +477,7 @@
             header.className = 'question-header';
             const qNumSpan = document.createElement('span');
             qNumSpan.className = 'q-num';
-            qNumSpan.innerText = i+1;
+            qNumSpan.innerText = i + 1;
             const qTextSpan = document.createElement('div');
             qTextSpan.className = 'question-text';
             qTextSpan.innerText = q.text;
@@ -523,16 +488,14 @@
             card.appendChild(header);
             card.appendChild(optsDiv);
             root.appendChild(card);
-            // после добавления в DOM рендерим содержимое опций
             renderSingleQuestion(i);
         }
-        highlightAll();
     }
 
-    // подсчёт баллов
+    // Подсчет баллов (только для итоговой кнопки)
     function computeScore() {
         let correct = 0;
-        for (let i=0;i<allQuestions.length;i++) {
+        for (let i = 0; i < allQuestions.length; i++) {
             const ans = getStoredAnswer(i);
             if (ans !== null && ans === allQuestions[i].correct) correct++;
         }
@@ -542,14 +505,14 @@
     function updateResultUI() {
         const total = allQuestions.length;
         const correct = computeScore();
-        const percent = Math.round((correct/total)*100);
+        const percent = Math.round((correct / total) * 100);
         const panel = document.getElementById('resultPanel');
         let msg = '';
-        if (correct === total) msg = '🌟 Идеально! Ты – настоящий историк! 🌟';
-        else if (correct >= total*0.7) msg = '🏅 Отлично! Но осторожность не помешает.';
-        else if (correct >= total*0.4) msg = '📖 Средний результат. История ждёт тебя снова!';
-        else msg = '💀 Слишком много неудач... Учи историю Казахстана!';
-        panel.innerHTML = `<div style="font-weight:600;">📊 ИТОГ</div>
+        if (correct === total) msg = '🌟 Идеально! Настоящий знаток! 🌟';
+        else if (correct >= total * 0.7) msg = '🏅 Отличный результат, но будьте внимательнее.';
+        else if (correct >= total * 0.4) msg = '📖 Средний результат. Стоит повторить историю.';
+        else msg = '💀 Слишком много неудач... Учите историю Казахстана!';
+        panel.innerHTML = `<div style="font-weight:600;">📊 ИТОГОВЫЙ БАЛЛ</div>
             <div class="score-badge">${correct} / ${total} (${percent}%)</div>
             <div>${msg}</div>`;
     }
@@ -558,7 +521,6 @@
         loadLockState();
         renderFull();
         document.getElementById('submitResultsBtn').addEventListener('click', () => {
-            highlightAll();
             updateResultUI();
         });
     }
