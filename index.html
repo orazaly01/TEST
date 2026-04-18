@@ -1,11 +1,11 @@
-Вот готовый тест, где **окно «НЕУДАЧА» показывается ровно 1 секунду**, правильные ответы никак не выделяются, а все варианты имеют одинаковый цвет.
+Вот готовый тест, в котором **после завершения всех вопросов появляется кнопка «СБРОСИТЬ ВСЁ И НАЧАТЬ ЗАНОВО»**. При нажатии все ответы удаляются, вопросы разблокируются, и вы можете проходить тест снова.
 ```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>История Казахстана — тест вслепую (неудача 1 сек)</title>
+    <title>История Казахстана — тест с полным сбросом</title>
     <style>
         * {
             margin: 0;
@@ -160,6 +160,12 @@
 
         /* НИКАКОЙ ПОДСВЕТКИ ПРАВИЛЬНЫХ ОТВЕТОВ — всё единообразно */
 
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
         .btn-gold {
             background: linear-gradient(95deg, #dbb42c, #c9a03d);
             border: none;
@@ -169,7 +175,6 @@
             font-weight: bold;
             color: #2c2a24;
             border-radius: 60px;
-            margin-top: 2rem;
             cursor: pointer;
             transition: 0.1s;
             box-shadow: 0 8px 0 #7a581f;
@@ -177,6 +182,14 @@
         .btn-gold:active {
             transform: translateY(3px);
             box-shadow: 0 4px 0 #7a581f;
+        }
+        .btn-reset {
+            background: linear-gradient(95deg, #6c757d, #495057);
+            box-shadow: 0 8px 0 #2c2e33;
+        }
+        .btn-reset:active {
+            transform: translateY(3px);
+            box-shadow: 0 4px 0 #2c2e33;
         }
 
         .result-panel {
@@ -270,11 +283,14 @@
 
     <div id="quizRoot" class="quiz-grid"></div>
 
-    <button class="btn-gold" id="submitResultsBtn">📊 ПРОВЕРИТЬ РЕЗУЛЬТАТЫ 📊</button>
+    <div class="button-group">
+        <button class="btn-gold" id="submitResultsBtn">📊 ПРОВЕРИТЬ РЕЗУЛЬТАТЫ 📊</button>
+        <button class="btn-gold btn-reset" id="resetAllBtn">🔄 СБРОСИТЬ ВСЁ И НАЧАТЬ ЗАНОВО 🔄</button>
+    </div>
     <div class="result-panel" id="resultPanel">
         <div>🏆 Нажмите кнопку, чтобы узнать итоговый балл 🏆</div>
     </div>
-    <footer>✅ После выбора ответа вопрос блокируется. Никаких зелёных/красных подсказок — только честный результат.</footer>
+    <footer>✅ После выбора ответа вопрос блокируется. Кнопка сброса очищает все ответы и позволяет пройти тест заново.</footer>
 </div>
 
 <script>
@@ -346,7 +362,6 @@
         if (activeModal) return;
         const modalDiv = document.createElement('div');
         modalDiv.className = 'modal-overlay';
-        // Картинка — стилизованный череп (можно заменить на свою фотку, указав реальный URL)
         const failImgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%238B0000'/%3E%3Ctext x='50' y='67' font-size='38' text-anchor='middle' fill='white' font-weight='bold'%3E💀%3C/text%3E%3C/svg%3E";
         modalDiv.innerHTML = `
             <div class="modal-card">
@@ -363,18 +378,20 @@
                 activeModal.remove();
                 activeModal = null;
             }
-        }, 1000);  // ровно 1 секунда
+        }, 1000);
     }
 
     // --- Работа с localStorage ---
+    const STORAGE_KEY = 'blind_test_kazakh_resettable';
+
     function saveAnswerLocally(qid, selectedIdx) {
         const answers = getSavedMap();
         answers[qid] = selectedIdx;
-        localStorage.setItem('blind_test_kazakh_1sec', JSON.stringify(answers));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
     }
 
     function getSavedMap() {
-        const raw = localStorage.getItem('blind_test_kazakh_1sec');
+        const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return {};
         try { return JSON.parse(raw); } catch(e) { return {}; }
     }
@@ -391,6 +408,24 @@
         }
     }
 
+    // Функция ПОЛНОГО СБРОСА (удаляем все ответы, разблокируем вопросы)
+    function resetAllProgress() {
+        localStorage.removeItem(STORAGE_KEY);
+        for (let i = 0; i < allQuestions.length; i++) {
+            questionLocked[i] = false;
+        }
+        // Перерисовываем весь тест заново
+        renderFull();
+        // Сбрасываем панель результатов
+        const panel = document.getElementById('resultPanel');
+        panel.innerHTML = `<div>🏆 Нажмите кнопку, чтобы узнать итоговый балл 🏆</div>`;
+        // Закрываем модалку если вдруг активна
+        if (activeModal) {
+            activeModal.remove();
+            activeModal = null;
+        }
+    }
+
     // Фиксация выбора: сохраняем, блокируем, при ошибке показываем неудачу
     function lockAnswer(qid, selectedVal) {
         if (questionLocked[qid]) return;
@@ -399,11 +434,11 @@
         questionLocked[qid] = true;
         renderSingleQuestion(qid);
         if (!isCorrect) {
-            showFailModal();   // всплывает "НЕУДАЧА" на 1 секунду
+            showFailModal();
         }
     }
 
-    // Рендер одного вопроса (без какой-либо подсветки правильных ответов)
+    // Рендер одного вопроса
     function renderSingleQuestion(qid) {
         const cardDiv = document.querySelector(`.question-card[data-qid='${qid}']`);
         if (!cardDiv) return;
@@ -489,7 +524,7 @@
         }
     }
 
-    // Подсчет баллов (только для итоговой кнопки)
+    // Подсчет баллов
     function computeScore() {
         let correct = 0;
         for (let i = 0; i < allQuestions.length; i++) {
@@ -519,6 +554,11 @@
         renderFull();
         document.getElementById('submitResultsBtn').addEventListener('click', () => {
             updateResultUI();
+        });
+        document.getElementById('resetAllBtn').addEventListener('click', () => {
+            if (confirm('❗ ВНИМАНИЕ: все ваши ответы будут удалены, тест начнётся заново. Вы уверены?')) {
+                resetAllProgress();
+            }
         });
     }
     init();
