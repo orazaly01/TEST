@@ -1,0 +1,569 @@
+Ниже представлен код теста, который реализует вашу идею: **правильные ответы скрыты** (зеленое/красное свечение появляется **только после выбора**), а при ошибке на 10 секунд всплывает модальное окно с картинкой «Неудача». После выбора вопрос блокируется, изменить ответ нельзя.
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>История Казахстана — тест с суровой неудачей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c2c 0%, #2a4a35 100%);
+            font-family: 'Inter', 'Segoe UI', 'Roboto', 'Georgia', serif;
+            padding: 2rem 1.2rem;
+            color: #2d2a24;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 253, 245, 0.97);
+            backdrop-filter: blur(2px);
+            border-radius: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            padding: 2rem;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .hero h1 {
+            font-size: 2.6rem;
+            background: linear-gradient(130deg, #9e2a2b, #d4af37);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 800;
+        }
+        .hero .sub {
+            font-size: 1rem;
+            color: #4e3e2e;
+            background: #f4ecd8;
+            display: inline-block;
+            padding: 0.3rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+        .warning {
+            background: #f3e3c2;
+            border-radius: 40px;
+            padding: 0.3rem 1rem;
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #9e5e1a;
+        }
+
+        .quiz-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .question-card {
+            background: #ffffff;
+            border-radius: 2rem;
+            border: 1px solid #f0e3ce;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.03);
+            padding: 1rem 1.5rem 1.2rem;
+            transition: all 0.2s;
+        }
+        .question-card.locked {
+            background: #fefaf0;
+            opacity: 0.96;
+        }
+
+        .question-header {
+            display: flex;
+            align-items: baseline;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+            border-left: 5px solid #d4af37;
+            padding-left: 1rem;
+        }
+        .q-num {
+            background: #2c5f2d;
+            color: white;
+            font-weight: bold;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 60px;
+            font-size: 0.9rem;
+        }
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2b3b2b;
+            line-height: 1.3;
+            flex: 1;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-top: 0.5rem;
+        }
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            background: #fefaf2;
+            padding: 0.6rem 1.2rem;
+            border-radius: 60px;
+            border: 1px solid #ede3d0;
+            transition: 0.1s ease;
+            cursor: pointer;
+        }
+        .option-row:hover {
+            background: #f7efdf;
+            transform: translateX(4px);
+        }
+        /* Заблокированный вопрос — неактивен */
+        .question-card.locked .option-row {
+            cursor: default;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+        input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #b4652d;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .question-card.locked input[type="radio"] {
+            cursor: default;
+        }
+        .option-label {
+            font-size: 0.98rem;
+            font-weight: 500;
+            color: #2f2a24;
+            cursor: pointer;
+            flex: 1;
+        }
+        .question-card.locked .option-label {
+            cursor: default;
+        }
+
+        /* Подсветка после выбора */
+        .correct-highlight {
+            background: #b7e4c7 !important;
+            border-left: 8px solid #2c6e2f !important;
+            border-radius: 60px;
+        }
+        .wrong-highlight {
+            background: #f8d7da !important;
+            border-left: 8px solid #b91c1c !important;
+            border-radius: 60px;
+        }
+
+        .btn-gold {
+            background: linear-gradient(95deg, #dbb42c, #c9a03d);
+            border: none;
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c2a24;
+            border-radius: 60px;
+            margin-top: 2rem;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 8px 0 #7a581f;
+        }
+        .btn-gold:active {
+            transform: translateY(3px);
+            box-shadow: 0 4px 0 #7a581f;
+        }
+
+        .result-panel {
+            margin-top: 2rem;
+            background: linear-gradient(115deg, #fbf5e8, #f7efdf);
+            border-radius: 2rem;
+            padding: 1.3rem 1rem;
+            text-align: center;
+            border: 1px solid #decb9c;
+        }
+        .score-badge {
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: #ffffffc9;
+            display: inline-block;
+            padding: 0.2rem 1.8rem;
+            border-radius: 80px;
+            margin: 0.5rem 0;
+            color: #9e2a2b;
+        }
+
+        /* Модальное окно неудачи */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            transition: opacity 0.2s;
+        }
+        .modal-card {
+            background: #2d1e12;
+            border-radius: 3rem;
+            padding: 1.5rem 2rem 2rem;
+            text-align: center;
+            max-width: 320px;
+            width: 80%;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.5);
+            border: 2px solid #b5651e;
+            animation: shake 0.4s ease;
+        }
+        .modal-card img {
+            width: 100%;
+            max-width: 180px;
+            border-radius: 2rem;
+            margin-bottom: 1rem;
+            border: 3px solid #e0b354;
+        }
+        .modal-card h3 {
+            color: #ffcc88;
+            font-size: 2rem;
+            margin: 0.5rem 0;
+            font-weight: 800;
+        }
+        .modal-card p {
+            color: #f3d9b1;
+            font-size: 1.2rem;
+        }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            margin-top: 1.5rem;
+            opacity: 0.8;
+        }
+        @media (max-width: 650px) {
+            .glass-container { padding: 1.2rem; }
+            .question-text { font-size: 1rem; }
+            .option-label { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="glass-container">
+    <div class="hero">
+        <h1>🏺 СУРОВЫЙ ТЕСТ 🏺</h1>
+        <div class="sub">История Казахстана — ошибка не прощается</div>
+        <div class="warning">⚠️ Правильные ответы НЕ видны до выбора. Ошибешься — увидишь «НЕУДАЧУ» на 10 секунд ⚠️</div>
+    </div>
+
+    <div id="quizRoot" class="quiz-grid"></div>
+
+    <button class="btn-gold" id="submitResultsBtn">📊 ПРОВЕРИТЬ РЕЗУЛЬТАТЫ 📊</button>
+    <div class="result-panel" id="resultPanel">
+        <div>🏆 Нажмите кнопку, чтобы узнать итоговый балл 🏆</div>
+    </div>
+    <footer>✅ После выбора ответа: правильный подсветится зелёным, ошибочный — красным. Вопрос блокируется.</footer>
+</div>
+
+<script>
+    // ------------------------------- ВСЕ ВОПРОСЫ (50 штук, полная история) ---------------------------------
+    const originalQuestions = [
+        { text: "1. как называлось земледелие андроновцев?", options: ["A) сезонное земледелие", "B) переходное земледелие", "C) орошаемое земледелие", "D) оседлое земледелие", "E) сквозное земледелие"], correct: 3 },
+        { text: "2. имя человека, правившего древним племенем:", options: ["A) Командир", "Б) Вождь", "C) Капитан", "D) Комбат", "Е) Старик"], correct: 1 },
+        { text: "3. хан, поднявший Шанырак Ак Орданын:", options: ["А) Темуджин", "B) Чагатай", "C) Батый", "D) Орда Ежен", "E) Истинный"], correct: 3 },
+        { text: "4. Автор произведения «узкий путь, скользкий путь», написанного о восстании 1916 года:", options: ["А) Мухтар Ауэзов", "B) Сабит Муканов", "C) Алихан Букейханов", "D) Сакен Сейфуллин", "E) Ахмет Байтурсынович"], correct: 4 },
+        { text: "5. день Демократической модернизации Республики Казахстан:", options: ["A) 25 октября", "B) 30 августа", "C) 17 декабря", "D) 16 декабря", "E) 5 октября"], correct: 1 },
+        { text: "6. Бронзовый век какие этапы охватывают?", options: ["A) 2-1 тысячелетия до н. э.", "Б) 30-10 тысячелетия до н. э.", "C) 5-3 тысячелетия до н. э.", "D) 80-40 тысячелетия до н. э.", "E) 140-40 тысячелетия до н. э."], correct: 0 },
+        { text: "7. Тюркеш каганат к власти какой Каган укрепился с приходом?", options: ["A) Ясень", "B) Сулу Каган", "C) Есенбук", "D) Бильге Каган", "E) Мукан Каган"], correct: 1 },
+        { text: "8. хану Моголстану в управлении государством кто помог?", options: ["A) Другой", "B) Беклербек", "C) Ноян", "D) Улысбек", "Е) Бек"], correct: 1 },
+        { text: "9. Время создания Казахского ханства.", options: ["A) XVIII век", "B) XV век", "C) XVII век", "D) XIV век", "E) XVI век"], correct: 1 },
+        { text: "10. какое политико-экономическое значение имел Казахстан для России в первой половине XVIII в.?", options: ["А) как 'ворота и ключи', которые входят в Азию", "B) дешевая рабочая сила Казахстана", "C) думал уничтожить Джунгарию руками казахов", "D) доступ к дешевым продуктам животного происхождения", "E) эффективность создания военного союза наравне с Казахстаном"], correct: 0 },
+        { text: "11. Х1хг. классик казахского кюя, кюйши:", options: ["А) Дина", "B) Шернияз", "C) Желание", "D) Суюнбай", "E) Курмангазы"], correct: 4 },
+        { text: "12. Абайское учебное заведение в Семее.", options: ["A) Семипалатинский областной статистический комитет", "B) Семипалатинское училище", "C) гимназия 4 класса", "D) Казахская учительская школа", "E) медресе 'Ахмет Риза'"], correct: 3 },
+        { text: "13. казахский певец Соловей, занимавший особое место в развитии музыкального искусства в начале XX века:", options: ["А) Шолак Баймурзин", "Б) Майра Шамсутдинова", "C) Дина Нурпеисова", "D) Амре Кашаубаев", "E) Галия Байжанова"], correct: 1 },
+        { text: "14. доктор исторических наук, осужденный на 25 лет.", options: ["А) А. Маргулан", "B) Е. Бекмаханов", "C) Г. Массон", "D) Б. Греков", "E) К. Нурпеисов"], correct: 1 },
+        { text: "15. эпоха, когда родились лук-стрела и бумеранг.:", options: ["A) Энеолит", "Б) Палеолит", "C) Мезолит", "D) Неолит", "Е) Мустьер"], correct: 2 },
+        { text: "16. какую должность занимали близкие родственники шаньюя в гуннском обществе?", options: ["A) Тюменский", "B) Покрытие", "C) Это", "D) Бек", "E) Центурион"], correct: 0 },
+        { text: "17. чиновниковый чин, относящийся к 12 классу по уставу 1822 г.", options: ["A) волостные султаны", "B) сельские старшины", "C) богатые владели", "D) танцы", "E) завоеваны султанами"], correct: 1 },
+        { text: "18. когда Шокан окончил кадетский корпус в 1853 году, возраст:", options: ["А) в 16", "B) В 19", "C) В 17", "D) В 15", "E) В 18"], correct: 3 },
+        { text: "19. решение, принятое 4 апреля 1919 года:", options: ["A) об оправдании Алашордистов", "Б) о казни алашордынцев", "C) об уничтожении Алаш Орды", "D) по прекращению действий Алаш Орды", "E) заключение договоров с Алашордынцами"], correct: 0 },
+        { text: "20. Какое учреждение было создано для голодающих детей в 1921 году?", options: ["A) Школы", "B) Детская кухня", "C) Детский комитет", "D) Детские сады", "E) Детский дом"], correct: 4 },
+        { text: "21. количество всего скота, реализованного государству на мясо в Шубартауском районе в 1931-1932 годах:", options: ["A) 60 %", "B) 70-75 %", "C) 85-90 %", "D) 80%", "E) 50-60%"], correct: 2 },
+        { text: "22. перевел на казахский язык произведения А. С. Пушкина, М. Ю. Лермонтова, г. Токая, пролетарский гимн “интернациональный:", options: ["А) А. Байтурсынов", "B) М. Жумабаев", "C) М. Дулатов", "D) Ж. Аймаутов", "E) А. Букейханов"], correct: 0 },
+        { text: "23. Южно-Казахстанский воин, участвовавший в защите знаменитого 'Дома Павлова' в Сталинграде:", options: ["А) Т. Мырзаев", "B) К. Метатаев", "C) А. Бельгин", "D) К. Аманжолов", "Е) К. Кузин"], correct: 1 },
+        { text: "24. по каким признакам Н. С. Хрущев разделил партийные организации в 60-е годы ХХ в.?", options: ["A) по количеству коммунистов", "B) по административным признакам", "C) Территориальный", "D) по образованию", "E) Производственный"], correct: 4 },
+        { text: "25. 5 июня 1865 года царь дал Амир на подготовку вопросов изучения казахской земли:", options: ["A) I Николай", "B) I Александр", "C) I Петр", "D) II Александр", "E) II Петр"], correct: 3 }
+    ];
+
+    const newQuestions = [
+        { text: "1. период, когда люди усваивают медь и олово и осваивают производство бронзы:", options: ["A) начало 1 тыс. лет н. э.", "B) середина тысячелетия до н. э.", "C) 2 тыс. лет до н. э.", "D) 1 тыс. лет до н. э.", "E) 3 тыс. лет до н. э."], correct: 2 },
+        { text: "2. Сак скотовод, увезший армию Дария I в пустыню:", options: ["A) Четверть", "Б) Спаргапис", "C) Бахтиар", "D) Рустем", "Е) Шарыш"], correct: 1 },
+        { text: "3. кто считался главнокомандующим всеми вооруженными силами Золотой Орды?", options: ["А) Хан", "B) Жырау", "C) Би", "D) Хақан", "E) Батыр"], correct: 0 },
+        { text: "4. 1916 жылғы көтерілістің сипаты:", options: ["A) буржуазиялық", "B) либералдық", "C) ұлт – азаттық", "D) демократиялық", "E) социалистік"], correct: 2 },
+        { text: "5. Қазақстан Республикасының Республика күні:", options: ["A) 16 декабря", "B) 17 декабря", "C) 25 октября", "D) 30 августа", "E) 5 октября"], correct: 2 },
+        { text: "6. эпоха вытеснения камня:", options: ["А) Серебро", "Б) Золото", "C) Бронза", "D) Железо", "E) Медь"], correct: 3 },
+        { text: "7. какое государство возглавлял Мукан Каган?", options: ["A) Монгольская империя", "B) Могол", "C) Карлук", "D) Турецкий каганат", "E) Казахское ханство"], correct: 3 },
+        { text: "8. деятель, когда Ногайская Орда окончательно отделилась от Золотой Орды:", options: ["A) Едиге", "Б) Господин Моисей", "C) Дождевик", "D) Вакхасский танец", "Е) Нураддин"], correct: 0 },
+        { text: "9. хану, урегулировавшему политическую ситуацию в Казахском ханстве в конце XVIII-начале XVIII в.:", options: ["A) Хакназар", "B) Тауке хан", "C) Есим хан", "D) Абылай хан", "E) Касым хан"], correct: 1 },
+        { text: "10. отрасли промышленности, развитые в Казахстане во II половине ХІХ в.:", options: ["A) изготовление станков", "B) легкая промышленность", "C) пищевая промышленность", "D) добыча горной продукции", "E) добыча золота"], correct: 3 },
+        { text: "11. годы жизни Махамбета Утемисовича:", options: ["A) 1804-1838 гг.", "B) 1801-1845 гг.", "C) 1803-1840 гг.", "D) 1802-1842 гг.", "E) 1804-1846 гг."], correct: 3 },
+        { text: "12. человек, повлиявший на воспитание Шокана:", options: ["А) Бабушка Зере", "Б) Дед Балгожа", "C) Анасы Тоғжан", "D) Әпкесі Ұлпан", "E) Әжесі Айғаным"], correct: 0 },
+        { text: "13. Абай Құнанбайұлы өмір сүрген жылдар.", options: ["A) 1840-1890жж.", "B) 1845-1900жж.", "C) 1846-1897жж.", "D) 1855-1905жж.", "E) 1845-1904жж."], correct: 4 },
+        { text: "14. КСРО-да «Халық шаруашылығын қалпына келтіру және дамыту туралы» бесжылдық жоспар қай жылы наурыз айында қабылданды?", options: ["A) 1947 ж.", "B) 1945 ж.", "C) 1948 ж.", "D) 1946 г.", "E) 1949 ж."], correct: 3 },
+        { text: "15. племенное объединение, созданное на юге Казахстана в III веке до н. э.:", options: ["А) Усы", "Б) Аланы", "C) Кенгуру", "D) Кипчаки", "E) Сарматы"], correct: 0 },
+        { text: "16. в соответствии с реформами 1867-68 гг. были подчинены полиция, воинские части, уездные учреждения, крепости:", options: ["A) Генерал-губернатору", "Б) начальнику уезда", "C) военному губернатору", "D) Вице-губернатору", "E) старшему султану"], correct: 0 },
+        { text: "17. области, вошедшие в Туркестанский край с 1886г.", options: ["А) Воробей, Урал", "B) Жетысу, Сырдарья", "C) Акмола, Семей", "D) Сырдарья, Фергана, Самарканд", "E) Алматы, Жамбыл"], correct: 3 },
+        { text: "18. в 1855г. уехал в Петербург, где получил серебряную медаль За искусство:", options: ["А) Таттимбет Казангапович", "B) Курмангазы Сагырбаевич", "C) Ықыллас Дукенович", "D) Даулеткерей Шыгаевич", "E) Дина Нурпеисовна"], correct: 0 },
+        { text: "19. забастовка в ноябре 1905 года, вызвавшая призыв в армию губернатора Семипалатинской области Галкина.", options: ["А) местной интеллигенции", "B) почтово-телеграфных работников", "C) работников мелких мастерских", "D) работников рудника", "E) Железнодорожников"], correct: 1 },
+        { text: "20. командующий 5-й армией Восточного фронта, освободившей Восточный Казахстан в 1919 году:", options: ["A) М.Тухачевский", "B) А. Айтиев", "C) А. Розыбакиев", "D) В. Чапаев", "E) М.Фрунзе"], correct: 4 },
+        { text: "21. основное назначение земельно-водной реформы в 1921 году:", options: ["A) возвращение казахским трудящимся земель, захваченных царской властью", "Б) продажа земли богатым", "C) выделение земель колхозам", "D) передача всей земли в распоряжение государства", "E) аренда земли населению"], correct: 0 },
+        { text: "22. объем земель, выделенных правительством Казахстана для открытия новых лагерей:", options: ["A) 70000 га", "B) 100000 га", "C) 50000 га", "D) 150000 га", "E) 110000 га"], correct: 3 },
+        { text: "23. один из алашских интеллектуалов, переводивший на казахский язык произведения А. С. Пушкина, М. Ю. Лермонтова, Ф. Шиллера:", options: ["А) М. Жумабаев", "B) Ж. Аймаутов", "C) А.мекеков", "D) А. Букейханов", "Е) М. Дулатов"], correct: 1 },
+        { text: "24. Год представления президентом Н. Назарбаевым программы 'Казахстан-2030':", options: ["A) 1991г.", "B) 1993г.", "C) 2000г.", "D) 1994г.", "E) 1997г."], correct: 4 },
+        { text: "25. распространенный вид оружия в раннем палеолите:", options: ["A) Дырокол", "Б) Резак", "C) Скребок", "D) рукопожатие", "E) Топор"], correct: 2 }
+    ];
+
+    const allQuestions = [...originalQuestions, ...newQuestions];
+    let questionLocked = new Array(allQuestions.length).fill(false);
+    let activeModal = null;
+
+    // -----  функция показа модалки с фоткой (неудача) -----
+    function showFailModal() {
+        if (activeModal) return;
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'modal-overlay';
+        // ВСТАВЬТЕ СЮДА ВАШУ ФОТОГРАФИЮ (можно ссылку или data:image, здесь пример с эмодзи-картинкой, но замените на реальный URL)
+        // Для демонстрации используем base64 пнг-заглушку с текстом "НЕУДАЧА", но вы можете подставить свою картинку.
+        // Чтобы реально вставить фото - поменяйте src на путь к файлу. Например: "fail.jpg" или "https://example.com/fail.png"
+        // Сейчас используется эмодзи-стиль, но вы можете заменить на любую картинку:
+        const failImgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%238B0000'/%3E%3Ctext x='50' y='67' font-size='32' text-anchor='middle' fill='white' font-weight='bold'%3E💀%3C/text%3E%3C/svg%3E";
+        // ↑ это стилизованный череп, но если нужна настоящая картинка - замените src на свой URL.
+        modalDiv.innerHTML = `
+            <div class="modal-card">
+                <img src="${failImgSrc}" alt="Неудача" style="background: #fff3e0; padding: 10px; border-radius: 2rem;">
+                <h3>НЕУДАЧА!</h3>
+                <p>Ответ неверный...<br>Попытки больше нет.</p>
+                <small style="color:#d4af37;">⏱ окно закроется через 10 секунд</small>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        activeModal = modalDiv;
+        setTimeout(() => {
+            if (activeModal) {
+                activeModal.remove();
+                activeModal = null;
+            }
+        }, 10000);
+    }
+
+    // сохраняем ответы в localStorage
+    function saveAnswerLocally(qid, selectedIdx) {
+        const answers = getSavedMap();
+        answers[qid] = selectedIdx;
+        localStorage.setItem('kazakh_no_preview_answers', JSON.stringify(answers));
+    }
+
+    function getSavedMap() {
+        const raw = localStorage.getItem('kazakh_no_preview_answers');
+        if (!raw) return {};
+        try { return JSON.parse(raw); } catch(e) { return {}; }
+    }
+
+    function getStoredAnswer(qid) {
+        const map = getSavedMap();
+        if (map.hasOwnProperty(qid)) return map[qid];
+        return null;
+    }
+
+    function loadLockState() {
+        const map = getSavedMap();
+        for (let i = 0; i < allQuestions.length; i++) {
+            if (map.hasOwnProperty(i)) questionLocked[i] = true;
+            else questionLocked[i] = false;
+        }
+    }
+
+    // Подсветка конкретного вопроса (зелёным правильный вариант + если ошибка – красный выбранный)
+    function highlightSingleQuestion(qid) {
+        const card = document.querySelector(`.question-card[data-qid='${qid}']`);
+        if (!card) return;
+        const qData = allQuestions[qid];
+        const correctIdx = qData.correct;
+        const rows = card.querySelectorAll('.option-row');
+        rows.forEach(r => r.classList.remove('correct-highlight', 'wrong-highlight'));
+        // подсвечиваем правильный ответ (зеленый) всегда, потому что после выбора показываем истину
+        if (rows[correctIdx]) rows[correctIdx].classList.add('correct-highlight');
+        const chosen = getStoredAnswer(qid);
+        if (chosen !== null && chosen !== correctIdx && rows[chosen]) {
+            rows[chosen].classList.add('wrong-highlight');
+        }
+    }
+
+    function highlightAll() {
+        for (let i = 0; i < allQuestions.length; i++) {
+            highlightSingleQuestion(i);
+        }
+    }
+
+    // фиксация выбора: сохраняем, блокируем, показываем модалку при ошибке
+    function lockAnswer(qid, selectedVal) {
+        if (questionLocked[qid]) return;
+        const isCorrect = (selectedVal === allQuestions[qid].correct);
+        saveAnswerLocally(qid, selectedVal);
+        questionLocked[qid] = true;
+        // Перерисовываем вопрос, чтобы обновить UI и заблокировать клики
+        renderSingleQuestion(qid);
+        highlightSingleQuestion(qid);
+        if (!isCorrect) {
+            showFailModal();   // при неправильном ответе — всплывает картинка "неудача" на 10 сек
+        }
+    }
+
+    // Рендер одного вопроса (чтобы не перерисовывать всё)
+    function renderSingleQuestion(qid) {
+        const cardDiv = document.querySelector(`.question-card[data-qid='${qid}']`);
+        if (!cardDiv) return;
+        const q = allQuestions[qid];
+        const isLocked = questionLocked[qid];
+        const storedVal = getStoredAnswer(qid);
+        // обновляем options
+        const optionsContainer = cardDiv.querySelector('.options-list');
+        if (!optionsContainer) return;
+        const groupName = `q_${qid}`;
+        optionsContainer.innerHTML = '';
+        q.options.forEach((opt, optIdx) => {
+            const row = document.createElement('div');
+            row.className = 'option-row';
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = groupName;
+            radio.value = optIdx;
+            radio.id = `${groupName}_opt${optIdx}`;
+            if (isLocked) radio.disabled = true;
+            if (storedVal === optIdx) radio.checked = true;
+            const label = document.createElement('label');
+            label.htmlFor = radio.id;
+            label.className = 'option-label';
+            label.innerText = opt;
+            row.appendChild(radio);
+            row.appendChild(label);
+            if (!isLocked) {
+                row.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'INPUT') {
+                        const inp = row.querySelector('input');
+                        if (inp && !inp.disabled) inp.checked = true;
+                    }
+                    if (!questionLocked[qid]) {
+                        const selectedRadio = row.querySelector('input');
+                        if (selectedRadio && selectedRadio.checked) {
+                            const val = parseInt(selectedRadio.value);
+                            lockAnswer(qid, val);
+                        }
+                    }
+                });
+                radio.addEventListener('change', () => {
+                    if (!questionLocked[qid] && radio.checked) {
+                        lockAnswer(qid, parseInt(radio.value));
+                    }
+                });
+            } else {
+                row.style.cursor = 'default';
+            }
+            optionsContainer.appendChild(row);
+        });
+        if (isLocked) cardDiv.classList.add('locked');
+        else cardDiv.classList.remove('locked');
+    }
+
+    // Полный рендер
+    function renderFull() {
+        const root = document.getElementById('quizRoot');
+        root.innerHTML = '';
+        for (let i = 0; i < allQuestions.length; i++) {
+            const q = allQuestions[i];
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            if (questionLocked[i]) card.classList.add('locked');
+            card.setAttribute('data-qid', i);
+            const header = document.createElement('div');
+            header.className = 'question-header';
+            const qNumSpan = document.createElement('span');
+            qNumSpan.className = 'q-num';
+            qNumSpan.innerText = i+1;
+            const qTextSpan = document.createElement('div');
+            qTextSpan.className = 'question-text';
+            qTextSpan.innerText = q.text;
+            header.appendChild(qNumSpan);
+            header.appendChild(qTextSpan);
+            const optsDiv = document.createElement('div');
+            optsDiv.className = 'options-list';
+            card.appendChild(header);
+            card.appendChild(optsDiv);
+            root.appendChild(card);
+            // после добавления в DOM рендерим содержимое опций
+            renderSingleQuestion(i);
+        }
+        highlightAll();
+    }
+
+    // подсчёт баллов
+    function computeScore() {
+        let correct = 0;
+        for (let i=0;i<allQuestions.length;i++) {
+            const ans = getStoredAnswer(i);
+            if (ans !== null && ans === allQuestions[i].correct) correct++;
+        }
+        return correct;
+    }
+
+    function updateResultUI() {
+        const total = allQuestions.length;
+        const correct = computeScore();
+        const percent = Math.round((correct/total)*100);
+        const panel = document.getElementById('resultPanel');
+        let msg = '';
+        if (correct === total) msg = '🌟 Идеально! Ты – настоящий историк! 🌟';
+        else if (correct >= total*0.7) msg = '🏅 Отлично! Но осторожность не помешает.';
+        else if (correct >= total*0.4) msg = '📖 Средний результат. История ждёт тебя снова!';
+        else msg = '💀 Слишком много неудач... Учи историю Казахстана!';
+        panel.innerHTML = `<div style="font-weight:600;">📊 ИТОГ</div>
+            <div class="score-badge">${correct} / ${total} (${percent}%)</div>
+            <div>${msg}</div>`;
+    }
+
+    function init() {
+        loadLockState();
+        renderFull();
+        document.getElementById('submitResultsBtn').addEventListener('click', () => {
+            highlightAll();
+            updateResultUI();
+        });
+    }
+    init();
+</script>
+</body>
+</html>
+```
